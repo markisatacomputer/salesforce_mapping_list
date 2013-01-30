@@ -1,0 +1,147 @@
+<?php
+
+/**
+ * @file
+ * Manages Salesforce object and Drupal entity mappings.
+ */
+
+/**
+ * Access callback for managing salesforce mappings.
+ *
+ * @return bool
+ */
+function salesforce_mapping_list_access() {
+  if (user_access('administer salesforce mapping list')) {
+    $sfapi = salesforce_get_api();
+    return $sfapi->isAuthorized();
+  }
+  return FALSE;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function salesforce_mapping_list_permission() {
+  return array(
+    'administer salesforce mapping list' => array(
+      'title' => t('Administer salesforce list mapping'),
+      'description' => t('Administer Salesforce List field maps.'),
+      'restrict access' => TRUE,
+    ),
+    'view salesforce mapping list' => array(
+      'title' => t('View salesforce list mapping'),
+      'description' => t('View Salesforce List mapping data.'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Implements hook_install().
+ */
+function salesforce_mapping_list_install() {
+  // an attempt to keep this info cached.  It's quite process intensive.
+  salesforce_mapping_list_valid_objects();
+}
+
+/**
+ * Implements hook_cron().
+ */
+function salesforce_mapping_list_cron() {
+  // an attempt to keep this info cached.  It's quite process intensive.
+  salesforce_mapping_list_valid_objects();
+}
+
+/**
+ * Implements hook_entity_info().
+ */
+function salesforce_mapping_list_entity_info() {
+  $return = array(
+    'salesforce_mapping_list' => array(
+      'label' => t('Salesforce List Mapping'),
+      'controller class' => 'EntityAPIControllerExportable',
+      'entity class' => 'SalesforceMappingList',
+      'base table' => 'salesforce_mapping_list',
+      'uri callback' => 'entity_class_uri',
+      'fieldable' => FALSE,
+      'exportable' => TRUE,
+      'module' => 'salesforce_mapping_list',
+      'entity keys' => array(
+        'id' => 'salesforce_mapping_list_id',
+        'name' => 'name',
+        'label' => 'label'
+      ),
+      'bundle keys' => array(
+        'bundle' => 'type',
+      ),
+      'bundles' => array(
+        'salesforce_mapping_list' => array(
+          'label' => 'Salesforce List Mapping',
+        ),
+      ),
+      // Enable the entity API's admin UI.
+      'admin ui' => array(
+        'path' => 'admin/structure/salesforce/list_mappings',
+        'file' => 'salesforce_mapping_list.admin.inc',
+        'file path' => drupal_get_path('module', 'salesforce_mapping_list') . '/includes',
+        'controller class' => 'SalesforceMappingListUIController',
+      ),
+      'access callback' => 'salesforce_mapping_list_access',
+      'label callback' => 'entity_class_label',
+    ),
+    'salesforce_mapping_list_item' => array(
+      'label' => t('Salesforce List Mapping Item'),
+      'controller class' => 'EntityAPIController',
+      'entity class' => 'SalesforceMappingListItem',
+      'base table' => 'salesforce_mapping_list_item',
+      'fieldable' => FALSE,
+      'exportable' => FALSE,
+      'module' => 'salesforce_mapping_list',
+      'entity keys' => array(
+        'id' => 'salesforce_mapping_list_item_id',
+      ),
+    )
+  );
+
+  return $return;
+}
+
+/**
+ * Loads a single salesforce_mapping_list or all of them if no name provided.
+ *
+ * @param null $name
+ *
+ * @return array
+ */
+function salesforce_mapping_list_load($name = NULL) {
+  $types = entity_load_multiple_by_name('salesforce_mapping_list', isset($name) ? array($name) : FALSE);
+  return isset($name) ? reset($types) : $types;
+}
+
+/**
+ *  Return list of salesforce objects with picklists.
+ */
+function salesforce_mapping_list_valid_objects() {
+  $objects = cache_get('salesforce_mapping_list_valid_objects');
+  if ($objects) {
+    return $objects->data;
+  } else {
+    $sfapi = salesforce_get_api();
+    $objects = $sfapi->objects();
+    $valid_objects = array();
+    foreach ($objects as $object) {
+      $fields = $sfapi->objectDescribe($object['name']);
+      foreach ($fields['fields'] as $field) {
+        if ($field['type'] == 'picklist' || $field['type'] == 'multipicklist') {
+          $object_name = $object['name'];
+          if (!isset($valid_objects[$object_name])) {
+            $valid_objects[$object_name]['label'] = $object['label'];
+          }
+          $valid_objects[$object_name]['fields'][$field['name']] = $field['label'];
+        }
+      }
+    }
+    cache_set('salesforce_mapping_list_valid_objects',$valid_objects);
+    return $valid_objects;
+  }
+}

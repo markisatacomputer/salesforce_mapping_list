@@ -1,0 +1,14 @@
+name = Salesforce Mapping Lists
+description = Map Drupal entities to Salesforce picklists and multi-picklists.
+package = Salesforce
+core = 7.x
+
+files[] = includes/salesforce_mapping_list.entity.inc
+files[] = includes/salesforce_mapping_list.ui_controller.inc
+files[] = includes/salesforce_mapping_list_object.entity.inc
+
+configure = admin/structure/salesforce/list_mappings
+
+dependencies[] = salesforce
+dependencies[] = salesforce_mapping
+dependencies[] = entity
