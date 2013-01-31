@@ -14,18 +14,18 @@ class SalesforceMappingList extends Entity {
     $salesforce_object_field,
     $drupal_entity_type = 'taxonomy_term', // only mapping to taxonomy terms for now
     $drupal_bundle,
-    $field_mappings,
+    $mapped_property = 'name', // only mapping to taxonomy terms for now
     $update_period,
     $created,
     $updated,
-    $last_synch,
+    $last_sync,
     $weight;
 
   public function __construct(array $values = array()) {
     parent::__construct($values, 'salesforce_mapping_list');
   }
   
-  public function get_fields($properties = array()) {
+  public function get_items($properties = array()) {
     //get all associated mapping_list_field entities
     $efq = new EntityFieldQuery();
     $efq->entityCondition('entity_type', 'salesforce_mapping_list_item')
@@ -44,7 +44,7 @@ class SalesforceMappingList extends Entity {
   
   public function delete() {
     //delete associated mapping_list_items
-    if ($fields = $this->get_fields()) {
+    if ($fields = $this->get_items()) {
       foreach($fields as $field) {
         $field->delete();
       }

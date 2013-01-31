@@ -67,11 +67,12 @@ function salesforce_mapping_list_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
-      'field_mappings' => array(
-        'type' => 'text',
-        'serialize' => TRUE,
-        'size' => 'big',
-        'description' => 'A serialized object that stores the field mappings.',
+      'mapped_property' => array(
+        'description' => 'Entity property that recieves Salesforce list item value.',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
       ),
       'created' => array(
         'description' => 'The Unix timestamp when the salesforce_mapping was created.',
@@ -176,6 +177,13 @@ function salesforce_mapping_list_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
+      'mapped_property' => array(
+        'description' => 'Entity property that recieves Salesforce list item value.',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ),
       'created' => array(
         'description' => 'The Unix timestamp when the object mapping was created.',
         'type' => 'int',
@@ -184,12 +192,6 @@ function salesforce_mapping_list_schema() {
       ),
       'entity_updated' => array(
         'description' => 'The Unix timestamp when the mapped Drupal entity was last updated.',
-        'type' => 'int',
-        'not null' => TRUE,
-        'default' => 0,
-      ),
-      'last_sync' => array(
-        'description' => 'The Unix timestamp when the record was last synced with Salesforce.',
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,

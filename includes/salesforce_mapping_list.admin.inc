@@ -54,9 +54,14 @@ function salesforce_mapping_list_form($form, &$form_state, SalesforceMappingList
     ),
   );
   
+  // These two might be incorporated later.
   $form['drupal_entity']['drupal_entity_type'] = array(
     '#type' => 'hidden',
     '#value' => isset($mapping) ? $mapping->drupal_entity_type : 0,
+  );
+  $form['drupal_entity']['mapped_property'] = array(
+    '#type' => 'hidden',
+    '#value' => isset($mapping) ? $mapping->mapped_property : 0,
   );
 
   $drupal_entity_type = & $form_state['values']['drupal_entity_type'];
@@ -174,6 +179,7 @@ function salesforce_mapping_list_form_validate($form, &$form_state) {
     ->propertyCondition('salesforce_object_field', $values['salesforce_object_field'])
     ->propertyCondition('drupal_entity_type', $values['drupal_entity_type'])
     ->propertyCondition('drupal_bundle', $values['drupal_bundle'])
+    ->propertyCondition('mapped_property', $values['mapped_property'])
     ->count();
 
   // Existing mapping, ensure not using any other unique combo.

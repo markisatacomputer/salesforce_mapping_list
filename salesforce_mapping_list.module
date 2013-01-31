@@ -40,7 +40,7 @@ function salesforce_mapping_list_permission() {
  * Implements hook_install().
  */
 function salesforce_mapping_list_install() {
-  // an attempt to keep this info cached.  It's quite process intensive.
+  // An attempt to keep this info cached.  It's quite process intensive.
   salesforce_mapping_list_valid_objects();
 }
 
@@ -48,8 +48,105 @@ function salesforce_mapping_list_install() {
  * Implements hook_cron().
  */
 function salesforce_mapping_list_cron() {
-  // an attempt to keep this info cached.  It's quite process intensive.
+  // An attempt to keep this info cached.  It's quite process intensive.
   salesforce_mapping_list_valid_objects();
+
+  // Queue one list at a time, starting with new ones
+  if ($new = salesforce_mapping_list_unsynced()) {
+    $list = array_pop($new);
+  } else if ($update=salesforce_mapping_list_need_sync()) {
+    $list = array_pop($update);
+  }
+  if (isset($list)) {
+    $sfapi = salesforce_get_api();
+    $queue = DrupalQueue::get('salesforce_mapping_list');
+
+    // Get the list from salesforce
+    $object = $sfapi->objectDescribe($list->salesforce_object_type);
+    $fields = $object['fields'];
+    while(!isset($list_field)) {
+      $field = array_pop($fields);
+      if ($field['name'] == $list->salesforce_object_field) {
+        // Process list values
+        $list_field = array();
+        foreach ($field['picklistValues'] as $value) {
+          // Skip empty strings
+          if (!empty($value['label'])) {
+            $list_field[$value['label']] = $value['label'];
+          }
+        }
+      }
+    }
+
+    // Get existing list items and check to see any need to be deleted.
+    if (isset($list_field)) {
+      if ($list_items = $list->get_items()) {
+        foreach ($list_items as $key => $item) {
+          if ($name = $list_item->entity_property()) {
+            // If an existing entity is no longer in the list, it needs to go.
+            if (!isset($list_field[$name])) {
+              $item->delete();
+              unset($list_items[$key]);
+            // All other existing entities don't need to be processed.
+            } else {
+              unset($list_field[$name]);
+            }
+            // What remains in $list_field should be new items.
+          } 
+        }
+      }
+    
+      // Only continue if there are new items left
+      if (isset($list_field) && !empty($list_field)) {
+        // Create the list queue items.
+        foreach ($list_field as $list_item) {
+          $queue->createItem(array(
+            'id' => $list->salesforce_mapping_list_id,
+            'item' => $list_item['label'],
+            'entity_type' => $list->drupal_entity_type,
+            'bundle' => $list->drupal_bundle,
+            'property' => $list->mapped_property,
+            'object_type' => $list->salesforce_object_type,
+            'object_field' => $list->salesforce_object_field,
+          ));
+        }
+      }
+      // Lastly, update the last_sync time for this salesforce_mapping_list.
+      $list->last_sync = REQUEST_TIME;
+      $list->save();
+    }
+  }
+}
+
+/**
+ * Implements hook_queue_cron_info().
+ */
+function salesforce_mapping_list_queue_cron_info() {
+  $queues['salesforce_mapping_list'] = array(
+    'worker callback' => 'salesforce_mapping_list_create_item',
+    'time' => 120,
+  );
+ 
+  return $queues;
+}
+
+/**
+ * Callback for salesforce_mapping_list_queue_cron_info().
+ */
+function salesforce_mapping_list_create_item($data){
+  // Create new salesforce_mapping_list_item
+  $list_item = new SalesforceMappingListItem;
+  $list_item->salesforce_mapping_list_id = $data['id'];
+  $list_item->drupal_entity_type = $data['entity_type'];
+  $list_item->drupal_bundle = $data['bundle'];
+  $list_item->mapped_property = $data['property'];
+  $list_item->salesforce_object_type = $data['object_type'];
+  $list_item->salesforce_object_field = $data['object_field'];
+  if ($item_id = $list_item->create_entity($data['item'])) {
+    $list_item->entity_id = $item_id;
+    $list_item->save();
+    watchdog('salesforce_mapping_list','Created :entity_type entity id :id associated with salesforce_mapping_list :list_id and salesforce_mapping_list_item :list_item_id', array());
+  }
 }
 
 /**
@@ -119,7 +216,7 @@ function salesforce_mapping_list_load($name = NULL) {
 }
 
 /**
- *  Return list of salesforce objects with picklists.
+ *  Return array of salesforce objects with picklists.
  */
 function salesforce_mapping_list_valid_objects() {
   $objects = cache_get('salesforce_mapping_list_valid_objects');
@@ -143,5 +240,34 @@ function salesforce_mapping_list_valid_objects() {
     }
     cache_set('salesforce_mapping_list_valid_objects',$valid_objects);
     return $valid_objects;
+  }
+}
+
+/**
+ *  Return array of salesforce_mapping_list entities that have never synced.
+ */
+function salesforce_mapping_list_unsynced() {
+  $query = new EntityFieldQuery();
+  $query->entityCondition('entity_type', 'salesforce_mapping_list')
+      ->propertyCondition('last_sync', 0);
+  $results = $query->execute();
+  if (!empty($results) && !empty($results['salesforce_mapping_list'])) {
+    return entity_load('salesforce_mapping_list', array_keys($results['salesforce_mapping_list']));
+  } else {
+    return FALSE;
+  }
+}
+
+/**
+ *  Return array of salesforce_mapping_list entities that have never synced.
+ */
+function salesforce_mapping_list_need_sync() {
+  $results = db_query('SELECT l.salesforce_mapping_list_id FROM {salesforce_mapping_list} l WHERE (:timestamp-l.last_synch) > l.update_period AND l.last_synch > 0', array(':timestamp' => REQUEST_TIME));
+  $results = $results->fetchAllAssoc('salesforce_mapping_list_id');
+  
+  if (!empty($results)) {
+    return entity_load('salesforce_mapping_list', array_keys($results));
+  } else {
+    return FALSE;
   }
 }
