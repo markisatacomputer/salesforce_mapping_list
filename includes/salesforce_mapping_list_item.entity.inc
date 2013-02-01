@@ -8,8 +8,6 @@ class SalesforceMappingListItem extends Entity {
   public
     $salesforce_mapping_list_item_id,
     $salesforce_mapping_list_id,
-    $salesforce_object_id,
-    $salesforce_object_field,
     $entity_type = 'taxonomy_term',
     $entity_id,
     $mapped_property = 'name',

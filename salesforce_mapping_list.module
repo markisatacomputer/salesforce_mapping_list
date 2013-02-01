@@ -106,8 +106,6 @@ function salesforce_mapping_list_cron() {
             'entity_type' => $list->drupal_entity_type,
             'bundle' => $list->drupal_bundle,
             'property' => $list->mapped_property,
-            'object_type' => $list->salesforce_object_type,
-            'object_field' => $list->salesforce_object_field,
           ));
         }
       }
@@ -140,10 +138,9 @@ function salesforce_mapping_list_create_item($data){
   $list_item->drupal_entity_type = $data['entity_type'];
   $list_item->drupal_bundle = $data['bundle'];
   $list_item->mapped_property = $data['property'];
-  $list_item->salesforce_object_type = $data['object_type'];
-  $list_item->salesforce_object_field = $data['object_field'];
   if ($item_id = $list_item->create_entity($data['item'])) {
     $list_item->entity_id = $item_id;
+    $list_item->is_new = TRUE;
     $list_item->save();
     watchdog('salesforce_mapping_list','Created :entity_type entity id :id associated with salesforce_mapping_list :list_id and salesforce_mapping_list_item :list_item_id', array());
   }
