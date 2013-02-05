@@ -48,12 +48,20 @@ class SalesforceMappingListItem extends Entity {
       }
     }
     
+    $entity_info = entity_get_info($this->drupal_entity_type);
     $values = array(
-      'bundle' => $this->drupal_bundle,
       $this->mapped_property => $data,
+      $entity_info['entity keys']['bundle'] => $this->drupal_bundle,
     );
-    return entity_create($this->drupal_entity_type, $values);
-  }
+    $entity = entity_create($this->drupal_entity_type, $values);
+    $wrapper = entity_metadata_wrapper($this->drupal_entity_type, $entity);
+    $wrapper->save();
+    
+    $entity_values = $wrapper->value();
+    $entity_id = $entity_values->$entity_info['entity keys']['id'];
+
+    return $entity_id;
+  }  
   
   public function get_mapping() {
     //get all associated mapping_list_field entities

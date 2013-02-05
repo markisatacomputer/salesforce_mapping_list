@@ -59,7 +59,6 @@ function salesforce_mapping_list_cron() {
   }
   if (isset($list)) {
     $sfapi = salesforce_get_api();
-    $queue = DrupalQueue::get('salesforce_mapping_list');
 
     // Get the list from salesforce
     $object = $sfapi->objectDescribe($list->salesforce_object_type);
@@ -99,10 +98,12 @@ function salesforce_mapping_list_cron() {
       // Only continue if there are new items left
       if (isset($list_field) && !empty($list_field)) {
         // Create the list queue items.
+        $queue = DrupalQueue::get('salesforce_mapping_list');
+        $queue->createQueue();
         foreach ($list_field as $list_item) {
           $queue->createItem(array(
             'id' => $list->salesforce_mapping_list_id,
-            'item' => $list_item['label'],
+            'item' => $list_item,
             'entity_type' => $list->drupal_entity_type,
             'bundle' => $list->drupal_bundle,
             'property' => $list->mapped_property,
@@ -119,10 +120,10 @@ function salesforce_mapping_list_cron() {
 /**
  * Implements hook_queue_cron_info().
  */
-function salesforce_mapping_list_queue_cron_info() {
+function salesforce_mapping_list_cron_queue_info() {
   $queues['salesforce_mapping_list'] = array(
     'worker callback' => 'salesforce_mapping_list_create_item',
-    'time' => 120,
+    'time' => 30,
   );
  
   return $queues;
@@ -132,17 +133,18 @@ function salesforce_mapping_list_queue_cron_info() {
  * Callback for salesforce_mapping_list_queue_cron_info().
  */
 function salesforce_mapping_list_create_item($data){
+  module_load_include("inc","salesforce_mapping_list","includes/salesforce_mapping_list_item.entity");
   // Create new salesforce_mapping_list_item
   $list_item = new SalesforceMappingListItem;
   $list_item->salesforce_mapping_list_id = $data['id'];
   $list_item->drupal_entity_type = $data['entity_type'];
   $list_item->drupal_bundle = $data['bundle'];
   $list_item->mapped_property = $data['property'];
-  if ($item_id = $list_item->create_entity($data['item'])) {
-    $list_item->entity_id = $item_id;
+  if ($entity_id = $list_item->create_entity($data['item'])) {
+    $list_item->entity_id = $entity_id;
     $list_item->is_new = TRUE;
     $list_item->save();
-    watchdog('salesforce_mapping_list','Created :entity_type entity id :id associated with salesforce_mapping_list :list_id and salesforce_mapping_list_item :list_item_id', array());
+    watchdog('salesforce_mapping_list','Created :entity_type entity id :id associated with salesforce_mapping_list :list_id and salesforce_mapping_list_item :list_item_id', array(':entity_type' => $list_item->drupal_entity_type, ':id' =>  $entity_id, ':list_id' => $data['id']));
   }
 }
 
@@ -259,7 +261,7 @@ function salesforce_mapping_list_unsynced() {
  *  Return array of salesforce_mapping_list entities that have never synced.
  */
 function salesforce_mapping_list_need_sync() {
-  $results = db_query('SELECT l.salesforce_mapping_list_id FROM {salesforce_mapping_list} l WHERE (:timestamp-l.last_synch) > l.update_period AND l.last_synch > 0', array(':timestamp' => REQUEST_TIME));
+  $results = db_query('SELECT l.salesforce_mapping_list_id FROM {salesforce_mapping_list} l WHERE (:timestamp-l.last_sync) > l.update_period AND l.last_sync > 0', array(':timestamp' => REQUEST_TIME));
   $results = $results->fetchAllAssoc('salesforce_mapping_list_id');
   
   if (!empty($results)) {
