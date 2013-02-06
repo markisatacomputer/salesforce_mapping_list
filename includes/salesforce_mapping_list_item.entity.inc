@@ -9,6 +9,7 @@ class SalesforceMappingListItem extends Entity {
     $salesforce_mapping_list_item_id,
     $salesforce_mapping_list_id,
     $entity_type = 'taxonomy_term',
+    $entity_bundle,
     $entity_id,
     $mapped_property = 'name',
     $created,
@@ -48,13 +49,25 @@ class SalesforceMappingListItem extends Entity {
       }
     }
     
-    $entity_info = entity_get_info($this->drupal_entity_type);
+    //  If entity with the values corresponding to $this exists, link to it instead of creating a new entity.
+    $query = new EntityFieldQuery();
+    $query->entityCondition('entity_type', $this->entity_type)
+        ->entityCondition('bundle', $this->entity_bundle)
+        ->propertyCondition($this->mapped_property, $data);
+    $results = $query->execute();
+    if (!empty($results) && !empty($results[$this->entity_type])) {
+      $existing = array_keys($results[$this->entity_type]);
+      return array_shift($existing);
+    }
+    
+    //  If neither of the above, create a new entity.
+    $entity_info = entity_get_info($this->entity_type);
     $values = array(
       $this->mapped_property => $data,
-      $entity_info['entity keys']['bundle'] => $this->drupal_bundle,
+      $entity_info['entity keys']['bundle'] => $this->entity_bundle,
     );
-    $entity = entity_create($this->drupal_entity_type, $values);
-    $wrapper = entity_metadata_wrapper($this->drupal_entity_type, $entity);
+    $entity = entity_create($this->entity_type, $values);
+    $wrapper = entity_metadata_wrapper($this->entity_type, $entity);
     $wrapper->save();
     
     $entity_values = $wrapper->value();

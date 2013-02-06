@@ -53,9 +53,9 @@ function salesforce_mapping_list_cron() {
 
   // Queue one list at a time, starting with new ones
   if ($new = salesforce_mapping_list_unsynced()) {
-    $list = array_pop($new);
+    $list = array_shift($new);
   } else if ($update=salesforce_mapping_list_need_sync()) {
-    $list = array_pop($update);
+    $list = array_shift($update);
   }
   if (isset($list)) {
     $sfapi = salesforce_get_api();
@@ -64,7 +64,7 @@ function salesforce_mapping_list_cron() {
     $object = $sfapi->objectDescribe($list->salesforce_object_type);
     $fields = $object['fields'];
     while(!isset($list_field)) {
-      $field = array_pop($fields);
+      $field = array_shift($fields);
       if ($field['name'] == $list->salesforce_object_field) {
         // Process list values
         $list_field = array();
@@ -105,8 +105,8 @@ function salesforce_mapping_list_cron() {
             'id' => $list->salesforce_mapping_list_id,
             'item' => $list_item,
             'entity_type' => $list->drupal_entity_type,
-            'bundle' => $list->drupal_bundle,
-            'property' => $list->mapped_property,
+            'entity_bundle' => $list->drupal_bundle,
+            'mapped_property' => $list->mapped_property,
           ));
         }
       }
@@ -137,9 +137,9 @@ function salesforce_mapping_list_create_item($data){
   // Create new salesforce_mapping_list_item
   $list_item = new SalesforceMappingListItem;
   $list_item->salesforce_mapping_list_id = $data['id'];
-  $list_item->drupal_entity_type = $data['entity_type'];
-  $list_item->drupal_bundle = $data['bundle'];
-  $list_item->mapped_property = $data['property'];
+  $list_item->entity_type = $data['entity_type'];
+  $list_item->entity_bundle = $data['entity_bundle'];
+  $list_item->mapped_property = $data['mapped_property'];
   if ($entity_id = $list_item->create_entity($data['item'])) {
     $list_item->entity_id = $entity_id;
     $list_item->is_new = TRUE;

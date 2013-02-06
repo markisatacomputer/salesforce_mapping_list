@@ -177,6 +177,13 @@ function salesforce_mapping_list_schema() {
         'not null' => TRUE,
         'default' => '',
       ),
+      'entity_bundle' => array(
+        'description' => 'Drupal entity bundle.',
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'default' => '',
+      ),
       'mapped_property' => array(
         'description' => 'Entity property that recieves Salesforce list item value.',
         'type' => 'varchar',
