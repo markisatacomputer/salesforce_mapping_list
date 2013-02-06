@@ -149,20 +149,6 @@ function salesforce_mapping_list_schema() {
         'not null' => TRUE,
         'description' => 'Salesforce_mapping entity ID.',
       ),
-      'salesforce_object_id' => array(
-        'description' => 'Salesforce object identifier',
-        'type' => 'varchar',
-        'length' => 32,
-        'not null' => TRUE,
-        'default' => '',
-      ),
-      'salesforce_object_field' => array(
-        'description' => 'The Salesforce list field identifier.',
-        'type' => 'varchar',
-        'length' => 32,
-        'not null' => TRUE,
-        'default' => '',
-      ),
       'entity_id' => array(
         'description' => 'Drupal entity Id.',
         'type' => 'int',
