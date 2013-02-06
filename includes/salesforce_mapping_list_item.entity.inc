@@ -72,6 +72,7 @@ class SalesforceMappingListItem extends Entity {
     
     $entity_values = $wrapper->value();
     $entity_id = $entity_values->$entity_info['entity keys']['id'];
+    watchdog('salesforce_mapping_list','Created :entity_type entity id = :id, :mapped_property = :value', array(':entity_type' => $this->entity_type, ':id' =>  $entity_id, ':mapped_property' => $this->mapped_property, ':value' => $data));
 
     return $entity_id;
   }  
