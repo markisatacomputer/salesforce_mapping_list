@@ -80,7 +80,7 @@ function salesforce_mapping_list_cron() {
     // Get existing list items and check to see any need to be deleted.
     if (isset($list_field)) {
       if ($list_items = $list->get_items()) {
-        foreach ($list_items as $key => $item) {
+        foreach ($list_items as $key => $list_item) {
           if ($name = $list_item->entity_property()) {
             // If an existing entity is no longer in the list, it needs to go.
             if (!isset($list_field[$name])) {
