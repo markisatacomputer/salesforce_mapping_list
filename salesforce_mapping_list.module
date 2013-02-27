@@ -45,6 +45,60 @@ function salesforce_mapping_list_install() {
 }
 
 /**
+ * Implements hook_entity_info().
+ */
+function salesforce_mapping_list_entity_info() {
+  $return = array(
+    'salesforce_mapping_list' => array(
+      'label' => t('Salesforce List Mapping'),
+      'controller class' => 'EntityAPIControllerExportable',
+      'entity class' => 'SalesforceMappingList',
+      'base table' => 'salesforce_mapping_list',
+      'uri callback' => 'entity_class_uri',
+      'fieldable' => FALSE,
+      'exportable' => TRUE,
+      'module' => 'salesforce_mapping_list',
+      'entity keys' => array(
+        'id' => 'salesforce_mapping_list_id',
+        'name' => 'name',
+        'label' => 'label'
+      ),
+      'bundle keys' => array(
+        'bundle' => 'type',
+      ),
+      'bundles' => array(
+        'salesforce_mapping_list' => array(
+          'label' => 'Salesforce List Mapping',
+        ),
+      ),
+      // Enable the entity API's admin UI.
+      'admin ui' => array(
+        'path' => 'admin/structure/salesforce/list_mappings',
+        'file' => 'salesforce_mapping_list.admin.inc',
+        'file path' => drupal_get_path('module', 'salesforce_mapping_list') . '/includes',
+        'controller class' => 'SalesforceMappingListUIController',
+      ),
+      'access callback' => 'salesforce_mapping_list_access',
+      'label callback' => 'entity_class_label',
+    ),
+    'salesforce_mapping_list_item' => array(
+      'label' => t('Salesforce List Mapping Item'),
+      'controller class' => 'SalesforceMappingListItemController',
+      'entity class' => 'SalesforceMappingListItem',
+      'base table' => 'salesforce_mapping_list_item',
+      'fieldable' => FALSE,
+      'exportable' => FALSE,
+      'module' => 'salesforce_mapping_list',
+      'entity keys' => array(
+        'id' => 'salesforce_mapping_list_item_id',
+      ),
+    )
+  );
+
+  return $return;
+}
+
+/**
  * Implements hook_cron().
  */
 function salesforce_mapping_list_cron() {
@@ -102,11 +156,13 @@ function salesforce_mapping_list_cron() {
         $queue->createQueue();
         foreach ($list_field as $list_item) {
           $queue->createItem(array(
-            'id' => $list->salesforce_mapping_list_id,
+            'values' => array(
+              'salesforce_mapping_list_id' => $list->salesforce_mapping_list_id,
+              'entity_type' => $list->drupal_entity_type,
+              'entity_bundle' => $list->drupal_bundle,
+              'mapped_property' => $list->mapped_property,
+            ),
             'item' => $list_item,
-            'entity_type' => $list->drupal_entity_type,
-            'entity_bundle' => $list->drupal_bundle,
-            'mapped_property' => $list->mapped_property,
           ));
         }
       }
@@ -135,71 +191,13 @@ function salesforce_mapping_list_cron_queue_info() {
 function salesforce_mapping_list_create_item($data){
   module_load_include("inc","salesforce_mapping_list","includes/salesforce_mapping_list_item.entity");
   // Create new salesforce_mapping_list_item
-  $list_item = new SalesforceMappingListItem;
-  $list_item->salesforce_mapping_list_id = $data['id'];
-  $list_item->entity_type = $data['entity_type'];
-  $list_item->entity_bundle = $data['entity_bundle'];
-  $list_item->mapped_property = $data['mapped_property'];
+  $list_item = entity_create('salesforce_mapping_list_item', $data['values']);
   if ($entity_id = $list_item->create_entity($data['item'])) {
     $list_item->entity_id = $entity_id;
     $list_item->is_new = TRUE;
-    $list_item->save();
-    watchdog('salesforce_mapping_list','Associated :entity_type entity id :id associated with salesforce_mapping_list_item :list_item_id', array(':entity_type' => $list_item->drupal_entity_type, ':id' =>  $entity_id, ':list_item_id' => $list_item->salesforce_mapping_list_item_id));
+    entity_save('salesforce_mapping_list_item', $list_item);
+    watchdog('salesforce_mapping_list','Created :entity_type entity id :id associated with salesforce_mapping_list :list_id', array(':entity_type' => $list_item->entity_type, ':id' =>  $entity_id, ':list_id' => $list_item->salesforce_mapping_list_id));
   }
-}
-
-/**
- * Implements hook_entity_info().
- */
-function salesforce_mapping_list_entity_info() {
-  $return = array(
-    'salesforce_mapping_list' => array(
-      'label' => t('Salesforce List Mapping'),
-      'controller class' => 'EntityAPIControllerExportable',
-      'entity class' => 'SalesforceMappingList',
-      'base table' => 'salesforce_mapping_list',
-      'uri callback' => 'entity_class_uri',
-      'fieldable' => FALSE,
-      'exportable' => TRUE,
-      'module' => 'salesforce_mapping_list',
-      'entity keys' => array(
-        'id' => 'salesforce_mapping_list_id',
-        'name' => 'name',
-        'label' => 'label'
-      ),
-      'bundle keys' => array(
-        'bundle' => 'type',
-      ),
-      'bundles' => array(
-        'salesforce_mapping_list' => array(
-          'label' => 'Salesforce List Mapping',
-        ),
-      ),
-      // Enable the entity API's admin UI.
-      'admin ui' => array(
-        'path' => 'admin/structure/salesforce/list_mappings',
-        'file' => 'salesforce_mapping_list.admin.inc',
-        'file path' => drupal_get_path('module', 'salesforce_mapping_list') . '/includes',
-        'controller class' => 'SalesforceMappingListUIController',
-      ),
-      'access callback' => 'salesforce_mapping_list_access',
-      'label callback' => 'entity_class_label',
-    ),
-    'salesforce_mapping_list_item' => array(
-      'label' => t('Salesforce List Mapping Item'),
-      'controller class' => 'EntityAPIController',
-      'entity class' => 'SalesforceMappingListItem',
-      'base table' => 'salesforce_mapping_list_item',
-      'fieldable' => FALSE,
-      'exportable' => FALSE,
-      'module' => 'salesforce_mapping_list',
-      'entity keys' => array(
-        'id' => 'salesforce_mapping_list_item_id',
-      ),
-    )
-  );
-
-  return $return;
 }
 
 /**
