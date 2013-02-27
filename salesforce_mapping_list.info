@@ -5,7 +5,7 @@ core = 7.x
 
 files[] = includes/salesforce_mapping_list.entity.inc
 files[] = includes/salesforce_mapping_list.ui_controller.inc
-files[] = includes/salesforce_mapping_list_object.entity.inc
+files[] = includes/salesforce_mapping_list_item.entity.inc
 
 configure = admin/structure/salesforce/list_mappings
 
