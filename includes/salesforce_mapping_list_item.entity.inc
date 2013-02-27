@@ -1,12 +1,11 @@
 <?php
 
 /**
- * Entity class for Salesforce Mapping Objects
+ * Entity class for Salesforce Mapping List Items
  */
 class SalesforceMappingListItem extends Entity {
 
   public
-    $salesforce_mapping_list_item_id,
     $salesforce_mapping_list_id,
     $entity_type = 'taxonomy_term',
     $entity_bundle,
@@ -19,18 +18,6 @@ class SalesforceMappingListItem extends Entity {
     parent::__construct($values, 'salesforce_mapping_list_item');
   }
   
-  public function delete() {
-    //delete associated entity
-    $entity = entity_load($this->entity_type, $this->entity_id);
-    if (!empty($entity)){
-      foreach($entity as $e) {
-        $e->delete();
-      }
-    }
-
-    parent::delete();
-  }
-
   public function save() {
     if (isset($this->is_new) && $this->is_new) {
       $this->created = REQUEST_TIME;
@@ -44,7 +31,7 @@ class SalesforceMappingListItem extends Entity {
   public function create_entity($data) {
     //  Do not create if entity already exists.
     if ($this->entity_id) {
-      if ($this->entity() !== FALSE) {
+      if ($this->get_entity() !== FALSE) {
         return FALSE;
       }
     }
@@ -91,7 +78,7 @@ class SalesforceMappingListItem extends Entity {
     }
   }
   
-  public function entity() {
+  public function get_entity() {
     $entity = entity_load($this->entity_type,array($this->entity_id));
     if (!empty($entity)) {
       return $entity[$this->entity_type];
@@ -100,11 +87,32 @@ class SalesforceMappingListItem extends Entity {
   }
   
   public function entity_property($property = 'name') {
-    $entity = $this->entity();
-    if ($entity && iseet($this->$property)) {
+    $entity = $this->get_entity();
+    if ($entity && isset($this->$property)) {
       return $this->$property;
     }
     return FALSE;
   }
 
+}
+
+/**
+ * Controller class for Salesforce Mapping List Items
+ */
+class SalesforceMappingListItemController extends EntityAPIController {
+  /*    override to delete associated entities    */
+  public function delete($ids, DatabaseTransaction $transaction = NULL) {
+    $entities = $ids ? $this->load($ids) : FALSE;
+    if (!$entities) {
+      // Do nothing, in case invalid or no ids have been passed.
+      return;
+    }
+
+    foreach ($entities as $id => $entity) {
+      entity_delete($entity->entity_type, $entity->entity_id);
+      watchdog('salesforce_mapping_list','Deleted :entity_type entity id :id associated with salesforce_mapping_list :list_id', array(':entity_type' => $entity->entity_type, ':id' =>  $entity->entity_id, ':list_id' => $entity->salesforce_mapping_list_id));
+    }
+
+    parent::delete($ids, $transaction);
+  }
 }
