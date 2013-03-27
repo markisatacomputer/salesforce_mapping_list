@@ -81,15 +81,15 @@ class SalesforceMappingListItem extends Entity {
   public function get_entity() {
     $entity = entity_load($this->entity_type,array($this->entity_id));
     if (!empty($entity)) {
-      return $entity[$this->entity_type];
+      return $entity[$this->entity_id];
     }
     return FALSE;
   }
   
-  public function entity_property($property = 'name') {
+  public function entity_property($property = "name") {
     $entity = $this->get_entity();
-    if ($entity && isset($this->$property)) {
-      return $this->$property;
+    if ($entity && isset($entity->$property)) {
+      return $entity->$property;
     }
     return FALSE;
   }
